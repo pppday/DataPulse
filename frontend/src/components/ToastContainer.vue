@@ -11,20 +11,21 @@
       <div
         v-for="toast in toastStore.toasts"
         :key="toast.id"
-        class="pointer-events-auto w-full bg-white rounded-xl shadow-lg border p-4 flex items-start space-x-3 transition-all"
-        :class="getBorderClass(toast.type)"
+        class="pointer-events-auto relative w-full overflow-hidden rounded-xl bg-white border border-slate-200 shadow-lift p-4 pl-5 flex items-start gap-3 transition-all"
       >
+        <span class="absolute left-0 inset-y-0 w-[3px]" :class="getAccentClass(toast.type)"></span>
+
         <!-- Icon -->
         <div class="flex-shrink-0 mt-0.5">
-          <CheckCircle2 v-if="toast.type === 'success'" class="w-5 h-5 text-emerald-500" />
-          <AlertCircle v-else-if="toast.type === 'error'" class="w-5 h-5 text-rose-500" />
-          <AlertTriangle v-else-if="toast.type === 'warning'" class="w-5 h-5 text-amber-500" />
-          <Info v-else class="w-5 h-5 text-blue-500" />
+          <CheckCircle2 v-if="toast.type === 'success'" class="w-4 h-4 text-pine-600" />
+          <AlertCircle v-else-if="toast.type === 'error'" class="w-4 h-4 text-crimson-500" />
+          <AlertTriangle v-else-if="toast.type === 'warning'" class="w-4 h-4 text-accent-600" />
+          <Info v-else class="w-4 h-4 text-ink-900" />
         </div>
 
         <!-- Content -->
         <div class="flex-1 min-w-0">
-          <h4 class="text-xs font-bold text-slate-900 leading-tight">
+          <h4 class="text-xs font-semibold text-ink-900 leading-tight">
             {{ toast.title }}
           </h4>
           <p class="text-xs text-slate-600 mt-1 leading-relaxed break-words">
@@ -35,9 +36,9 @@
         <!-- Close Button -->
         <button
           @click="toastStore.remove(toast.id)"
-          class="flex-shrink-0 text-slate-400 hover:text-slate-600 p-0.5 rounded transition-colors"
+          class="flex-shrink-0 text-slate-400 hover:text-ink-900 p-0.5 rounded transition-colors cursor-pointer"
         >
-          <X class="w-4 h-4" />
+          <X class="w-3.5 h-3.5" />
         </button>
       </div>
     </transition-group>
@@ -50,16 +51,16 @@ import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-vue-ne
 
 const toastStore = useToastStore()
 
-const getBorderClass = (type) => {
+const getAccentClass = (type) => {
   switch (type) {
     case 'success':
-      return 'border-emerald-200/80 shadow-emerald-500/5'
+      return 'bg-pine-600'
     case 'error':
-      return 'border-rose-200/80 shadow-rose-500/5'
+      return 'bg-crimson-500'
     case 'warning':
-      return 'border-amber-200/80 shadow-amber-500/5'
+      return 'bg-accent-500'
     default:
-      return 'border-blue-200/80 shadow-blue-500/5'
+      return 'bg-ink-900'
   }
 }
 </script>

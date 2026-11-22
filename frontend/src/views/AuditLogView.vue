@@ -1,124 +1,120 @@
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div class="flex items-center space-x-2">
-            <span class="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
-              <ShieldCheck class="w-4 h-4" />
-            </span>
-            <h1 class="text-base font-bold text-slate-900 tracking-tight">SQL 执行与安全审计台账</h1>
-            <span class="text-[11px] px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-              全量链路落库可追溯
-            </span>
-          </div>
-          <p class="mt-1 text-xs text-slate-500">
-            全量记录自然语言推导的 SQL 查询、AST 语法树审查拦截详情及端到端执行耗时流水。
-          </p>
-        </div>
-
+    <PageHeader
+      :icon="ShieldCheck"
+      eyebrow="Security Audit"
+      title="SQL 执行与安全审计台账"
+      badge="全量链路落库可追溯"
+      badge-tone="success"
+      description="全量记录自然语言推导的 SQL 查询、AST 语法树审查拦截详情及端到端执行耗时流水。"
+    >
+      <template #actions>
         <button
           @click="fetchLogs"
           :disabled="loading"
-          class="flex items-center space-x-1.5 px-3.5 py-2 text-xs font-medium rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors"
+          class="dp-btn-secondary"
         >
           <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': loading }" />
           <span>刷新审计流水</span>
         </button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- Filter & Table Card -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+    <div class="dp-card p-5 space-y-4 dp-rise" style="animation-delay: 60ms">
       <!-- Status Tabs -->
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-2">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="dp-segment">
           <button
             @click="filterStatus = 'all'"
-            class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
-            :class="filterStatus === 'all' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'"
+            class="dp-segment-item"
+            :class="{ 'dp-segment-item-active': filterStatus === 'all' }"
           >
-            全部记录 ({{ logs.length }})
+            <span>全部记录</span>
+            <span class="ml-1 rounded-full bg-slate-200/70 px-1.5 text-[10px] tabular-nums">{{ logs.length }}</span>
           </button>
           <button
             @click="filterStatus = 'safe'"
-            class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
-            :class="filterStatus === 'safe' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-100'"
+            class="dp-segment-item"
+            :class="{ 'dp-segment-item-active text-pine-700': filterStatus === 'safe' }"
           >
-            审查通过 ({{ logs.filter(l => l.isSafe === 1).length }})
+            <span>审查通过</span>
+            <span class="ml-1 rounded-full bg-slate-200/70 px-1.5 text-[10px] tabular-nums">{{ logs.filter(l => l.isSafe === 1).length }}</span>
           </button>
           <button
             @click="filterStatus = 'intercepted'"
-            class="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
-            :class="filterStatus === 'intercepted' ? 'bg-rose-600 text-white' : 'text-slate-600 hover:bg-slate-100'"
+            class="dp-segment-item"
+            :class="{ 'dp-segment-item-active text-crimson-600': filterStatus === 'intercepted' }"
           >
-            沙箱阻断 ({{ logs.filter(l => l.isSafe === 0).length }})
+            <span>沙箱阻断</span>
+            <span class="ml-1 rounded-full bg-slate-200/70 px-1.5 text-[10px] tabular-nums">{{ logs.filter(l => l.isSafe === 0).length }}</span>
           </button>
         </div>
 
-        <div class="text-xs text-slate-400">
+        <div class="text-xs text-slate-400 tabular-nums">
           共收录 {{ filteredLogs.length }} 笔分析轨迹
         </div>
       </div>
 
       <!-- Audit Logs Table -->
-      <div class="overflow-x-auto rounded-xl border border-slate-200">
-        <table class="w-full text-left text-xs">
-          <thead class="bg-slate-50 border-b border-slate-200 text-slate-700 font-semibold uppercase">
+      <div class="dp-table-wrap">
+        <table class="dp-table">
+          <thead>
             <tr>
-              <th class="px-4 py-3">流水ID</th>
-              <th class="px-4 py-3">操作人</th>
-              <th class="px-4 py-3">分析自然语言需求</th>
-              <th class="px-4 py-3">AST 沙箱裁定</th>
-              <th class="px-4 py-3">耗时</th>
-              <th class="px-4 py-3">行数</th>
-              <th class="px-4 py-3">审计时间</th>
-              <th class="px-4 py-3 text-right">操作</th>
+              <th>流水ID</th>
+              <th>操作人</th>
+              <th>分析自然语言需求</th>
+              <th>AST 沙箱裁定</th>
+              <th>耗时</th>
+              <th>行数</th>
+              <th>审计时间</th>
+              <th class="text-right">操作</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 text-slate-700">
-            <tr
-              v-for="log in filteredLogs"
-              :key="log.id"
-              class="hover:bg-slate-50 transition-colors"
-            >
-              <td class="px-4 py-3 font-mono font-medium text-slate-500">
+          <tbody class="text-slate-700">
+            <tr v-for="log in filteredLogs" :key="log.id">
+              <td class="font-mono font-medium text-slate-400 tabular-nums">
                 #{{ log.id }}
               </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                <div class="font-medium text-slate-900">{{ log.realName || log.username || '系统用户' }}</div>
+              <td class="whitespace-nowrap">
+                <div class="font-medium text-ink-900">{{ log.realName || log.username || '系统用户' }}</div>
                 <div class="text-[11px] text-slate-400 font-mono">@{{ log.username }}</div>
               </td>
-              <td class="px-4 py-3 max-w-xs truncate text-slate-800" :title="log.userPrompt">
+              <td class="max-w-xs truncate text-slate-800" :title="log.userPrompt">
                 {{ log.userPrompt }}
               </td>
-              <td class="px-4 py-3 whitespace-nowrap">
-                <span
-                  class="px-2 py-0.5 text-[11px] font-bold rounded-full"
-                  :class="log.isSafe === 1
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-rose-50 text-rose-700 border border-rose-200'"
-                >
-                  {{ log.isSafe === 1 ? 'PASS 审查通过' : 'BLOCKED 阻断' }}
+              <td class="whitespace-nowrap">
+                <span :class="log.isSafe === 1 ? 'dp-badge-success' : 'dp-badge-danger'">
+                  <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                  <span>{{ log.isSafe === 1 ? 'PASS 审查通过' : 'BLOCKED 阻断' }}</span>
                 </span>
               </td>
-              <td class="px-4 py-3 font-mono">
+              <td class="font-mono tabular-nums">
                 {{ log.executionTimeMs }} ms
               </td>
-              <td class="px-4 py-3 font-mono">
+              <td class="font-mono tabular-nums">
                 {{ log.rowCount }} 行
               </td>
-              <td class="px-4 py-3 whitespace-nowrap text-slate-500 font-mono text-[11px]">
+              <td class="whitespace-nowrap text-slate-500 font-mono text-[11px] tabular-nums">
                 {{ log.createdAt }}
               </td>
-              <td class="px-4 py-3 text-right whitespace-nowrap">
+              <td class="text-right whitespace-nowrap">
                 <button
                   @click="openDetail(log)"
-                  class="text-blue-600 hover:text-blue-800 font-medium hover:underline text-xs"
+                  class="dp-btn-ghost text-ink-900 font-medium px-2.5 py-1"
                 >
                   查看详情
                 </button>
+              </td>
+            </tr>
+
+            <tr v-if="!loading && filteredLogs.length === 0">
+              <td colspan="8" class="py-14 text-center">
+                <div class="dp-icon-mark w-12 h-12 mx-auto mb-3 text-slate-400">
+                  <ShieldCheck class="w-5 h-5" />
+                </div>
+                <div class="text-xs text-slate-400">暂无审计记录</div>
               </td>
             </tr>
           </tbody>
@@ -129,48 +125,50 @@
     <!-- Detail Modal -->
     <div
       v-if="activeLog"
-      class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+      class="dp-modal-mask"
       @click.self="activeLog = null"
     >
-      <div class="bg-white rounded-2xl max-w-2xl w-full border border-slate-200 shadow-xl overflow-hidden p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+      <div class="dp-modal max-w-2xl space-y-4">
         <div class="flex items-center justify-between border-b border-slate-100 pb-3">
           <div class="flex items-center space-x-2">
-            <span
-              class="px-2 py-0.5 text-xs font-bold rounded"
-              :class="activeLog.isSafe === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'"
-            >
+            <span :class="activeLog.isSafe === 1 ? 'dp-badge-success' : 'dp-badge-danger'">
               {{ activeLog.isSafe === 1 ? 'PASS 审查通过' : 'BLOCKED 安全拦截' }}
             </span>
-            <h3 class="text-sm font-bold text-slate-900">审计轨迹详情 #{{ activeLog.id }}</h3>
+            <h3 class="dp-section-title">审计轨迹详情 #{{ activeLog.id }}</h3>
           </div>
-          <button @click="activeLog = null" class="text-slate-400 hover:text-slate-700 text-lg leading-none">
-            &times;
+          <button @click="activeLog = null" class="dp-btn-ghost p-1.5 rounded-full">
+            <X class="w-4 h-4" />
           </button>
         </div>
 
         <div class="space-y-3 text-xs">
           <div>
             <div class="font-semibold text-slate-500 mb-1">用户自然语言需求</div>
-            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 font-medium">
+            <div class="p-3 bg-slate-50/80 rounded-xl border border-slate-200/70 text-ink-900 font-medium">
               {{ activeLog.userPrompt }}
             </div>
           </div>
 
           <div>
             <div class="font-semibold text-slate-500 mb-1">执行/拦截原因与 AST 裁定说明</div>
-            <div class="p-3 rounded-xl border font-mono" :class="activeLog.isSafe === 1 ? 'bg-emerald-50/50 border-emerald-200 text-emerald-800' : 'bg-rose-50/50 border-rose-200 text-rose-800'">
+            <div
+              class="p-3 rounded-xl border font-mono"
+              :class="activeLog.isSafe === 1
+                ? 'bg-pine-50/70 border-pine-200 text-pine-800'
+                : 'bg-crimson-50/70 border-crimson-200 text-crimson-700'"
+            >
               {{ activeLog.safetyReason }}
             </div>
           </div>
 
           <div>
             <div class="font-semibold text-slate-500 mb-1">执行 SQL 语句</div>
-            <pre class="p-3 bg-slate-900 text-slate-100 rounded-xl overflow-x-auto font-mono text-[11px] leading-relaxed">{{ activeLog.generatedSql }}</pre>
+            <pre class="dp-code p-4 overflow-x-auto font-mono text-[11px] leading-relaxed">{{ activeLog.generatedSql }}</pre>
           </div>
 
           <div v-if="activeLog.insightSummary">
             <div class="font-semibold text-slate-500 mb-1">AI 商业决策洞察摘要</div>
-            <div class="p-3 bg-blue-50/50 rounded-xl border border-blue-200 text-slate-700 leading-relaxed">
+            <div class="p-3.5 bg-[#FAF7F1] border border-accent-200/80 rounded-xl text-slate-700 leading-relaxed">
               {{ activeLog.insightSummary }}
             </div>
           </div>
@@ -179,7 +177,7 @@
         <div class="flex justify-end pt-3 border-t border-slate-100">
           <button
             @click="activeLog = null"
-            class="px-4 py-2 text-xs font-medium rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+            class="dp-btn-secondary px-4"
           >
             关 闭
           </button>
@@ -193,7 +191,8 @@
 import { ref, computed, onMounted } from 'vue'
 import apiClient from '../api/client'
 import { useToastStore } from '../stores/toast'
-import { ShieldCheck, RefreshCw } from 'lucide-vue-next'
+import PageHeader from '../components/PageHeader.vue'
+import { ShieldCheck, RefreshCw, X } from 'lucide-vue-next'
 
 const toast = useToastStore()
 const logs = ref([])
