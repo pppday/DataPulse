@@ -1,0 +1,60 @@
+server:
+  port: 8090
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: datapulse-backend
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/datapulse_db?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 12345678
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: 12345678
+      timeout: 3000ms
+  ai:
+    openai:
+      api-key: ${LLM_API_KEY:${DEEPSEEK_API_KEY:sk-placeholder-unset}}
+      base-url: ${LLM_BASE_URL:${DEEPSEEK_BASE_URL:https://api.pppday.com/trial}}
+      chat:
+        completions-path: /v1/chat/completions
+        options:
+          model: ${LLM_MODEL:${DEEPSEEK_MODEL:gemini-3-flash}}
+          temperature: 0.1
+      embedding:
+        api-key: ${EMBEDDING_API_KEY:sk-placeholder-unset}
+        base-url: ${EMBEDDING_BASE_URL:https://api.siliconflow.cn}
+        embeddings-path: /v1/embeddings
+        options:
+          model: ${EMBEDDING_MODEL:BAAI/bge-m3}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: is_deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+jwt:
+  secret: DataPulseSecretKeyForJwtAuthenticationMustBeAtLeast512BitsLongAndSecure2026
+  expiration: 86400000 # 24 hours
+
+logging:
+  level:
+    root: INFO
+    com.pulseos.datapulse: DEBUG
