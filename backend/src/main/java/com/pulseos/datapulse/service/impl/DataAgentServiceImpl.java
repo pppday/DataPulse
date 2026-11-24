@@ -132,13 +132,14 @@ public class DataAgentServiceImpl implements DataAgentService {
             }
 
             // 3. 调用大模型生成针对性只读 SQL
-            generatedSql = generateSqlWithLlm(ds.getId(), userPrompt, schemaContext, fewShotBlock);
+            generatedSql = generateSqlWithLlm(ds, userPrompt, schemaContext, fewShotBlock);
         }
 
         Set<String> allowedTables = schemaCatalogService.getWhitelistedTables(ds.getId());
 
-        // 4. 经过 JSqlParser AST 语法树安全审查沙箱（基于动态白名单）
-        SqlSafetySandboxService.SafetyCheckResult safetyResult = sqlSafetySandboxService.inspectAndSanitize(generatedSql, allowedTables);
+        // 4. 经过 JSqlParser AST 语法树安全审查沙箱（基于动态白名单与方言适配）
+        SqlSafetySandboxService.SafetyCheckResult safetyResult =
+                sqlSafetySandboxService.inspectAndSanitize(generatedSql, allowedTables, ds.getDbType());
 
         if (!safetyResult.isSafe()) {
             // 被安全沙箱拦截
@@ -181,7 +182,9 @@ public class DataAgentServiceImpl implements DataAgentService {
         long startTime = System.currentTimeMillis();
         List<Map<String, Object>> rows;
         try {
-            rows = targetJdbcTemplate.queryForList(safetyResult.getSanitizedSql());
+            rows = SchemaCatalogServiceImpl.sanitizeJdbcRows(
+                    targetJdbcTemplate.queryForList(safetyResult.getSanitizedSql())
+            );
         } catch (Exception e) {
             log.error("[SQL 底层执行失败] sql={}, error={}", safetyResult.getSanitizedSql(), e.getMessage());
             throw new BusinessException(400, "SQL 执行失败: " + e.getMessage());
@@ -296,7 +299,14 @@ public class DataAgentServiceImpl implements DataAgentService {
     /**
      * 调用 Spring AI ChatClient 进行 Text-to-SQL 推导
      */
-    private String generateSqlWithLlm(Long datasourceId, String userPrompt, String schemaContext, String fewShotBlock) {
+    private String generateSqlWithLlm(SysDatasource ds, String userPrompt, String schemaContext, String fewShotBlock) {
+        Long datasourceId = ds.getId();
+        boolean isPg = "POSTGRESQL".equalsIgnoreCase(ds.getDbType());
+        String dialectLabel = isPg ? "PostgreSQL 16" : "MySQL 8.0";
+        String aliasRule = isPg
+                ? "3. 列别名必须清晰、具有业务可读性。所有中文别名及在 ORDER BY / GROUP BY 中引用的中文别名，必须一律用英文双引号包裹（例如: \"总对话数\", \"平均耗时\"），严禁使用反引号（`）和 MySQL 专有函数（如 DATE_FORMAT）。"
+                : "3. 列别名必须清晰、具有业务可读性。所有中文别名及在 ORDER BY / GROUP BY 中引用的中文别名，必须一律用反引号包裹（例如: `总销售额`, `商品名称`, `销售总数量`）。";
+
         if (!isLlmConfigured()) {
             if (Long.valueOf(1L).equals(datasourceId)) {
                 log.info("[LLM API KEY 未配置，默认数仓使用本地启发式规则兜底]");
@@ -305,27 +315,28 @@ public class DataAgentServiceImpl implements DataAgentService {
             throw new BusinessException(503, "大模型 API Key 未配置，无法为当前异构数据源自动生成 SQL");
         }
         String systemInstruction = """
-            你是企业级智能 Text-to-SQL 数据分析 Agent。
-            你的职责是基于给出的数据库元数据字典，将用户的自然语言问题转化为精准、严谨、只读的 MySQL 8.0 SQL 查询语句。
+            你是企业级智能 Text-to-SQL 数据分析引擎。
+            你的职责是基于给出的数据库元数据字典，将用户的自然语言问题转化为精准、严谨、只读的 %s SQL 查询语句。
             
             【必须严格遵守的铁律】：
             1. 只能使用上下文【企业数据库架构元数据字典】中包含的数据表与字段，严禁臆造不存在的表名或字段名。
             2. 严禁任何 DML/DDL（禁止 UPDATE, DELETE, INSERT, DROP, ALTER, TRUNCATE 等任何非只读指令）。
-            3. 列别名必须清晰、具有业务可读性。所有中文别名及在 ORDER BY / GROUP BY 中引用的中文别名，必须一律用反引号包裹（例如: `总销售额`, `商品名称`, `销售总数量`）。
+            %s
             4. 排序与条数控制：
                - 当用户明确指定了数量（如“前5个”、“TOP 10”、“前3名”）时，严格按照指定数字使用 LIMIT（如 LIMIT 5）。
                - 当用户明确要求“所有 / 全部 / 列表 / 清单”（例如“查所有商品”、“列出所有订单”）或进行 GROUP BY 汇总分组时，切勿擅自添加 LIMIT 限制！
                - 仅当用户既未指定数量又未要求全部、属于宽泛排行类问题时，才可使用合理的默认上限（例如 LIMIT 50）。
             5. 条件过滤谨慎原则：除非用户问题中有极其明确的状态限制（例如用户明确指出“已支付”、“已完成”），否则切勿擅自主观添加未要求的多余过滤条件（例如不要擅自添加 status IN (...) 等严苛状态码过滤），避免因测试数据或状态流转导致 0 行无数据返回！
             6. 当用户询问客户/用户排行（如“谁是最大的客户”、“消费最多的用户”）且元数据字典中存在跨库宽表视图（如 `v_ticket_sales_customer`、`v_order_customer_detail`、`v_member_profile` 或 `dim_customer`）时，优先查询宽表并直接展示客户真实名称/用户名（`customer_name` / `username`），切勿只输出冰冷的数字 ID！
-            7. 输出必须只包含一条合法的标准 MySQL 8.0 SQL 语句，禁止输出任何寒暄或 Markdown 以外的多余解释。
-            """;
+            7. 输出必须只包含一条合法的标准 %s SQL 语句，禁止输出任何寒暄或 Markdown 以外的多余解释。
+            """.formatted(dialectLabel, aliasRule, dialectLabel);
 
         StringBuilder userContentBuilder = new StringBuilder(schemaContext);
         if (fewShotBlock != null && !fewShotBlock.isBlank()) {
             userContentBuilder.append("\n").append(fewShotBlock);
         }
-        userContentBuilder.append("\n【用户分析需求】: ").append(userPrompt).append("\n请直接输出标准 MySQL 8.0 SQL：");
+        userContentBuilder.append("\n【用户分析需求】: ").append(userPrompt)
+                .append("\n请直接输出标准 ").append(dialectLabel).append(" SQL：");
         String userContent = userContentBuilder.toString();
 
         try {

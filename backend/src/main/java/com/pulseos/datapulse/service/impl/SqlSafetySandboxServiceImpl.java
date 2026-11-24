@@ -36,16 +36,26 @@ public class SqlSafetySandboxServiceImpl implements SqlSafetySandboxService {
             "sys_query_history",
             "mysql",
             "information_schema",
-            "performance_schema"
+            "performance_schema",
+            "pg_catalog",
+            "pg_user",
+            "pg_shadow",
+            "pg_roles"
     );
 
     @Override
     public SafetyCheckResult inspectAndSanitize(String rawSql) {
-        return inspectAndSanitize(rawSql, ALLOWED_TABLES);
+        return inspectAndSanitize(rawSql, ALLOWED_TABLES, "MYSQL");
     }
 
     @Override
     public SafetyCheckResult inspectAndSanitize(String rawSql, Set<String> allowedTables) {
+        return inspectAndSanitize(rawSql, allowedTables, "MYSQL");
+    }
+
+    @Override
+    public SafetyCheckResult inspectAndSanitize(String rawSql, Set<String> allowedTables, String dbType) {
+        boolean isPg = "POSTGRESQL".equalsIgnoreCase(dbType);
         Set<String> effectiveAllowedTables = (allowedTables != null && !allowedTables.isEmpty())
                 ? allowedTables : ALLOWED_TABLES;
 
@@ -69,8 +79,8 @@ public class SqlSafetySandboxServiceImpl implements SqlSafetySandboxService {
             cleanSql = cleanSql.substring(0, cleanSql.length() - 1).trim();
         }
 
-        // 规范化未用反引号包裹的中文列别名，防止 JSqlParser Lexer 抛出 TokenMgrException
-        cleanSql = normalizeChineseAliases(cleanSql);
+        // 按数据库方言规范化中文列别名（MySQL 用反引号，PostgreSQL 用双引号并修正误用的反引号）
+        cleanSql = normalizeChineseAliases(cleanSql, isPg);
 
         Statement statement;
         try {
@@ -111,12 +121,15 @@ public class SqlSafetySandboxServiceImpl implements SqlSafetySandboxService {
         Set<String> tableList = tablesNamesFinder.getTables(statement);
 
         for (String tbl : tableList) {
-            String lowerTbl = tbl.toLowerCase(Locale.ROOT).replace("`", "");
-            if (SENSITIVE_TABLES.contains(lowerTbl)) {
+            String lowerTbl = tbl.toLowerCase(Locale.ROOT).replace("`", "").replace("\"", "");
+            if (lowerTbl.startsWith("public.")) {
+                lowerTbl = lowerTbl.substring("public.".length());
+            }
+            if (SENSITIVE_TABLES.contains(lowerTbl) || lowerTbl.startsWith("pg_")) {
                 log.warn("[SQL 安全沙箱阻断] 拦截到尝试访问敏感系统表: {}", lowerTbl);
                 return SafetyCheckResult.builder()
                         .safe(false)
-                        .reason("【安全沙箱拦截】禁止通过智能Agent查询系统用户与审计敏感表: `" + lowerTbl + "`")
+                        .reason("【安全沙箱拦截】禁止查询系统用户、元数据或审计敏感表: `" + lowerTbl + "`")
                         .sanitizedSql(cleanSql)
                         .build();
             }
@@ -189,27 +202,33 @@ public class SqlSafetySandboxServiceImpl implements SqlSafetySandboxService {
         }
     }
 
-    private String normalizeChineseAliases(String sql) {
+    private String normalizeChineseAliases(String sql, boolean isPg) {
         if (sql == null || sql.isBlank()) return "";
+        char quoteChar = isPg ? '"' : '`';
         StringBuilder sb = new StringBuilder();
         boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
         boolean inBacktick = false;
 
         for (int i = 0; i < sql.length(); i++) {
             char c = sql.charAt(i);
-            if (c == '\'' && !inBacktick) {
+            if (c == '\'' && !inBacktick && !inDoubleQuote) {
                 inSingleQuote = !inSingleQuote;
                 sb.append(c);
-            } else if (c == '`' && !inSingleQuote) {
-                inBacktick = !inBacktick;
+            } else if (c == '"' && !inSingleQuote && !inBacktick) {
+                inDoubleQuote = !inDoubleQuote;
                 sb.append(c);
-            } else if (!inSingleQuote && !inBacktick && isChinese(c)) {
-                sb.append('`');
+            } else if (c == '`' && !inSingleQuote && !inDoubleQuote) {
+                inBacktick = !inBacktick;
+                // PostgreSQL 不支持反引号标识符，自动转为双引号
+                sb.append(isPg ? '"' : '`');
+            } else if (!inSingleQuote && !inDoubleQuote && !inBacktick && isChinese(c)) {
+                sb.append(quoteChar);
                 while (i < sql.length() && (isChinese(sql.charAt(i)) || Character.isLetterOrDigit(sql.charAt(i)) || sql.charAt(i) == '_')) {
                     sb.append(sql.charAt(i));
                     i++;
                 }
-                sb.append('`');
+                sb.append(quoteChar);
                 i--;
             } else {
                 sb.append(c);

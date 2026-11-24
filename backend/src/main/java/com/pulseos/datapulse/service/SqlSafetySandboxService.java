@@ -19,6 +19,7 @@ public interface SqlSafetySandboxService {
         private String sanitizedSql;
     }
 
+    SafetyCheckResult inspectAndSanitize(String rawSql, Set<String> allowedTables, String dbType);
     SafetyCheckResult inspectAndSanitize(String rawSql, Set<String> allowedTables);
     SafetyCheckResult inspectAndSanitize(String rawSql);
 }

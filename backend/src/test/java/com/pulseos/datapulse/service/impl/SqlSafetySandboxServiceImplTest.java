@@ -84,4 +84,27 @@ class SqlSafetySandboxServiceImplTest {
         assertTrue(res.getSanitizedSql().toUpperCase().contains("LIMIT 1000"),
                 "WITH CTE should have LIMIT 1000 injected: " + res.getSanitizedSql());
     }
+
+    @Test
+    void postgresqlDialectUsesDoubleQuotesAndStripsPublicSchema() {
+        String sql = "SELECT doc_code AS `文档编码`, COUNT(*) AS 分片数量 FROM public.ticket_kb_chunks GROUP BY doc_code";
+        SqlSafetySandboxService.SafetyCheckResult res = sandbox.inspectAndSanitize(
+                sql, java.util.Set.of("ticket_kb_chunks"), "POSTGRESQL"
+        );
+
+        assertTrue(res.isSafe(), "PostgreSQL SELECT should pass: " + res.getReason());
+        assertFalse(res.getSanitizedSql().contains("`"), "PostgreSQL SQL must not contain backticks: " + res.getSanitizedSql());
+        assertTrue(res.getSanitizedSql().contains("\"文档编码\""), "Backtick alias should convert to double quotes: " + res.getSanitizedSql());
+        assertTrue(res.getSanitizedSql().contains("\"分片数量\""), "Unquoted Chinese alias should wrap in double quotes: " + res.getSanitizedSql());
+        assertTrue(res.getSanitizedSql().toUpperCase().contains("LIMIT 1000"));
+    }
+
+    @Test
+    void ipv6HostIsAutomaticallyBracketedForJdbc() {
+        assertEquals("[2408:8207:1900::1]", DynamicDataSourceServiceImpl.formatHostForJdbc("2408:8207:1900::1"));
+        assertEquals("[::1]", DynamicDataSourceServiceImpl.formatHostForJdbc("::1"));
+        assertEquals("[::1]", DynamicDataSourceServiceImpl.formatHostForJdbc("[::1]"));
+        assertEquals("127.0.0.1", DynamicDataSourceServiceImpl.formatHostForJdbc("127.0.0.1"));
+        assertEquals("db.example.com", DynamicDataSourceServiceImpl.formatHostForJdbc("db.example.com"));
+    }
 }

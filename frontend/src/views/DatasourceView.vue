@@ -229,11 +229,12 @@
               <label class="block font-semibold text-slate-700 mb-1">数据库类型</label>
               <select
                 v-model="form.dbType"
+                @change="handleDbTypeChange"
                 :disabled="isReadOnly"
                 class="dp-input py-2 bg-white"
               >
                 <option value="MYSQL">MySQL 8.0 / 5.7</option>
-                <option value="POSTGRESQL">PostgreSQL</option>
+                <option value="POSTGRESQL">PostgreSQL 16 / pgvector</option>
               </select>
             </div>
             <div>
@@ -255,7 +256,7 @@
                 v-model="form.host"
                 :disabled="isReadOnly"
                 required
-                placeholder="127.0.0.1"
+                placeholder="127.0.0.1 / IPv6 / 域名"
                 class="dp-input py-2 font-mono"
               />
             </div>
@@ -409,6 +410,16 @@ const fetchDatasources = async () => {
     datasources.value = data
   } catch (err) {
     toast.error(err.message || '获取数据源列表失败')
+  }
+}
+
+const handleDbTypeChange = () => {
+  if (form.dbType === 'POSTGRESQL') {
+    if (!form.port || form.port === 3306) form.port = 5432
+    if (!isEditing.value && form.username === 'root') form.username = 'postgres'
+  } else {
+    if (!form.port || form.port === 5432) form.port = 3306
+    if (!isEditing.value && form.username === 'postgres') form.username = 'root'
   }
 }
 

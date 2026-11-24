@@ -58,8 +58,8 @@ public class DynamicDataSourceServiceImpl implements DynamicDataSourceService {
     public boolean testConnection(SysDatasource ds) {
         String url = buildJdbcUrl(ds);
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            DriverManager.setLoginTimeout(3);
+            Class.forName(resolveDriverClassName(ds));
+            DriverManager.setLoginTimeout(5);
             try (Connection conn = DriverManager.getConnection(url, ds.getUsername(), ds.getPassword())) {
                 return conn.isValid(3);
             }
@@ -145,16 +145,16 @@ public class DynamicDataSourceServiceImpl implements DynamicDataSourceService {
 
         try {
             return poolMap.computeIfAbsent(ds.getId(), k -> {
-                log.info("[动态初始化 HikariCP 连接池] dsId={}, name={}", ds.getId(), ds.getName());
+                log.info("[动态初始化 HikariCP 连接池] dsId={}, dbType={}, name={}", ds.getId(), ds.getDbType(), ds.getName());
                 HikariConfig config = new HikariConfig();
                 config.setJdbcUrl(buildJdbcUrl(ds));
                 config.setUsername(ds.getUsername());
                 config.setPassword(ds.getPassword());
-                config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+                config.setDriverClassName(resolveDriverClassName(ds));
                 config.setMaximumPoolSize(8);
                 config.setMinimumIdle(1);
-                config.setConnectionTimeout(3000);
-                config.setInitializationFailTimeout(3000);
+                config.setConnectionTimeout(5000);
+                config.setInitializationFailTimeout(5000);
                 config.setIdleTimeout(300000);
                 config.setPoolName("HikariDynamic-" + ds.getId());
                 return new HikariDataSource(config);
@@ -171,10 +171,33 @@ public class DynamicDataSourceServiceImpl implements DynamicDataSourceService {
         return new JdbcTemplate(getDataSource(id));
     }
 
-    private String buildJdbcUrl(SysDatasource ds) {
-        String host = ds.getHost() != null ? ds.getHost() : "127.0.0.1";
+    static String formatHostForJdbc(String rawHost) {
+        String host = (rawHost == null || rawHost.isBlank()) ? "127.0.0.1" : rawHost.trim();
+        // 裸 IPv6 地址（如 2408:xxxx::1 或 ::1）自动补方括号以符合 JDBC URI 规范
+        if (host.contains(":") && !(host.startsWith("[") && host.endsWith("]"))) {
+            return "[" + host + "]";
+        }
+        return host;
+    }
+
+    private boolean isPostgres(SysDatasource ds) {
+        return ds != null && "POSTGRESQL".equalsIgnoreCase(ds.getDbType());
+    }
+
+    private String resolveDriverClassName(SysDatasource ds) {
+        return isPostgres(ds) ? "org.postgresql.Driver" : "com.mysql.cj.jdbc.Driver";
+    }
+
+    String buildJdbcUrl(SysDatasource ds) {
+        String host = formatHostForJdbc(ds.getHost());
+        if (isPostgres(ds)) {
+            int port = ds.getPort() != null && ds.getPort() > 0 ? ds.getPort() : 5432;
+            String db = (ds.getDatabaseName() != null && !ds.getDatabaseName().isBlank()) ? ds.getDatabaseName().trim() : "postgres";
+            return String.format("jdbc:postgresql://%s:%d/%s?connectTimeout=5&socketTimeout=30&stringtype=unspecified",
+                    host, port, db);
+        }
         int port = ds.getPort() != null && ds.getPort() > 0 ? ds.getPort() : 3306;
-        String db = ds.getDatabaseName() != null ? ds.getDatabaseName() : "datapulse_db";
+        String db = (ds.getDatabaseName() != null && !ds.getDatabaseName().isBlank()) ? ds.getDatabaseName().trim() : "datapulse_db";
         return String.format("jdbc:mysql://%s:%d/%s?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true",
                 host, port, db);
     }
