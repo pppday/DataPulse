@@ -401,6 +401,15 @@
 </template>
 
 <script setup>
+/**
+ * 【智能数据分析工作台（自然语言 Text-to-SQL 与可视化看板）】
+ *
+ * 通俗理解：这是 DataPulse 最核心的业务取数页面（文件名沿用历史 AgentQueryView，功能为企业级自然语言查库与手写只读 SQL 分析）：
+ * 1. 支持自然语言提问自动生成 SQL，也支持直接手写/修改 SQL 二次执行（两种模式均受后端 AST 只读沙箱保护）；
+ * 2. 顶部可随时切换目标 MySQL / PostgreSQL 数据源，命中 Redis 查询缓存时会展示毫秒直出徽标；
+ * 3. ECharts 渲染引擎会自动识别 X 轴文本维度列，并在多指标量级悬殊（如购票张数 vs 消费总额）时自动启用左右双 Y 轴，避免小指标柱子被压扁；
+ * 4. 支持一键切换图表/明细表视图，以及流式导出带审计摘要的 Excel (.xlsx) 报表。
+ */
 defineOptions({
   name: 'AgentQueryView'
 })

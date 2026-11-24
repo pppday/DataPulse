@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/** 客户维度表实体（映射默认数仓 `dim_customer`，记录客户大区、省市与分级）。 */
 @Data
 @Builder
 @NoArgsConstructor

@@ -8,6 +8,12 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Excel 多工作表报表导出请求体（DTO）。
+ * <p>
+ * 携带前端已查出的明细数据及分析洞察摘要，或仅传 {@code prompt / customSql} 由后端现查现导，
+ * 最终由 {@link com.pulseos.datapulse.service.ExcelExportService} 流式写出为包含「数据明细 + 分析报告」双 Sheet 的 {@code .xlsx} 文件。
+ */
 @Data
 @Builder
 @NoArgsConstructor

@@ -188,7 +188,7 @@
       </div>
     </header>
 
-    <!-- Main Content Area with Transition & KeepAlive -->
+    <!-- 主内容区：带路由切换淡入淡出过渡，并对高频状态页（工作台、数据字典）开启 keep-alive 保活缓存 -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <router-view v-slot="{ Component }">
         <transition name="page" mode="out-in">
@@ -216,6 +216,14 @@
 </template>
 
 <script setup>
+/**
+ * DataPulse 登录后主应用外壳布局（MainLayout）。
+ * 负责包裹工作台、数据字典、数据源管理、SQL 安全审计、运营监控五大页面，统一提供：
+ * 1. 吸顶导航栏与移动端横向滚动导航；
+ * 2. 顶部全局目标数据源快捷切换器（与 Pinia datasourceStore 联动）；
+ * 3. 右上角用户身份菜单（支持一键切换管理员/分析师演示 RBAC 权限差异，以及安全退出）；
+ * 4. 子路由视图的过渡动画与关键页面 keep-alive 状态保活。
+ */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
@@ -240,9 +248,11 @@ const authStore = useAuthStore()
 const datasourceStore = useDatasourceStore()
 const toast = useToastStore()
 
+// 右上角用户下拉菜单展开状态及外层 DOM 引用（用于检测“点击菜单外部自动收起”）
 const isMenuOpen = ref(false)
 const dropdownRef = ref(null)
 
+// 顶部主导航菜单配置：窄屏显示 short 简称，宽屏显示 label 全称
 const navItems = [
   { to: '/query', label: '智能分析工作台', short: '智能工作台', icon: Terminal },
   { to: '/schema', label: '数仓元数据字典', short: '数据字典', icon: Table2 },
@@ -251,8 +261,10 @@ const navItems = [
   { to: '/dashboard', label: '运营监控', short: '运营监控', icon: LayoutDashboard }
 ]
 
+// 判断某导航项是否为当前激活路由
 const isActive = (p) => route.path === p
 
+// 顶栏下拉切换全局分析数仓：更新 Pinia 状态后，工作台与字典页会通过 watch 自动联动切换
 const handleDatasourceSwitch = (newId) => {
   datasourceStore.setDatasourceId(newId)
   const current = datasourceStore.datasources.find(d => d.id === newId)
@@ -261,6 +273,7 @@ const handleDatasourceSwitch = (newId) => {
   }
 }
 
+// 演示用一键切换身份角色（管理员 / 分析师），方便实时对比 RBAC 读写权限控制效果
 const handleFastSwitchRole = async (roleKey) => {
   try {
     await authStore.switchDemoRole(roleKey)
@@ -271,6 +284,7 @@ const handleFastSwitchRole = async (roleKey) => {
   }
 }
 
+// 退出登录：清掉本地登录凭证并跳转回登录页
 const handleLogout = () => {
   authStore.logout()
   isMenuOpen.value = false
@@ -278,17 +292,20 @@ const handleLogout = () => {
   toast.info('您已成功退出登录')
 }
 
+// 点击下拉菜单区域以外的空白处时，自动收起用户菜单
 const handleClickOutside = (e) => {
   if (dropdownRef.value && !dropdownRef.value.contains(e.target)) {
     isMenuOpen.value = false
   }
 }
 
+// 布局挂载时注册全局点击监听，并预加载可用数据源列表供顶栏下拉框使用
 onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
   await datasourceStore.fetchDatasources()
 })
 
+// 布局销毁前解绑全局事件，避免内存泄漏
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })

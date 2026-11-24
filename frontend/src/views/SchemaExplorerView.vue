@@ -389,6 +389,12 @@
 </template>
 
 <script setup>
+/**
+ * 【数仓全景字典与语义治理页（SchemaExplorerView）】
+ * 自动扫描当前选中数据源（MySQL / PostgreSQL）的所有物理表与只读分析视图，支持：
+ * - 查看每张表的字段结构、主键与注释，以及前 N 行真实数据抽样预览；
+ * - 管理员可逐表开关 Text-to-SQL 白名单，并维护补充给大模型的业务计算口径与关联规则。
+ */
 defineOptions({
   name: 'SchemaExplorerView'
 })

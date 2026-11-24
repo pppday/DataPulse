@@ -370,6 +370,11 @@
 </template>
 
 <script setup>
+/**
+ * 【企业动态多数据源管理页（DatasourceView）】
+ * 支持动态新增/编辑/删除 MySQL 与 PostgreSQL 数据源（兼容 IPv4、域名与 IPv6 地址）、实时连通性测试、切换全局默认库；
+ * 普通分析师角色（ROLE_ANALYST）仅可测活和切换工作台数据源，增删改配置按钮仅对管理员（ROLE_ADMIN）开放。
+ */
 import { ref, reactive, onMounted } from 'vue'
 import apiClient from '../api/client'
 import { useAuthStore } from '../stores/auth'

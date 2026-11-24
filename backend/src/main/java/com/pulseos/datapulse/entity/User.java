@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/** 平台登录用户与 RBAC 角色实体（映射 `sys_user`，区分 ROLE_ADMIN 总架构师与 ROLE_ANALYST 分析师）。 */
 @Data
 @Builder
 @NoArgsConstructor

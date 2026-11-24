@@ -16,6 +16,13 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 【数仓元数据字典扫描与 Prompt 裁剪服务】
+ *
+ * 通俗理解：这是教大模型“看懂数据库长什么样”的翻译官。
+ * - 自动按目标数据源类型（MySQL 查 `information_schema`，PostgreSQL 查 `pg_class`/`pg_stat_user_tables`）扫描所有实体表与只读分析视图（VIEW）；
+ * - 默认过滤掉系统敏感表（`sys_` / `mysql` / `pg_` 等），结合 `sys_table_config` 里的白名单开关和自定义口径规则，生成精准、精简且带方言约束的 Schema Prompt。
+ */
 @Service
 @RequiredArgsConstructor
 public class SchemaCatalogServiceImpl implements SchemaCatalogService {

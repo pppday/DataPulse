@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.Set;
 
+/** 基于 JSqlParser AST 的只读 SQL 安全审查与改写沙箱接口。 */
 public interface SqlSafetySandboxService {
 
     @Data

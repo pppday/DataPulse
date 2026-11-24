@@ -12,6 +12,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 基于 Redis 的自然语言查询结果缓存服务（按数据源 ID + 规范化提问 MD5 缓存）。
+ * 同一数据源的重复分析提问直接毫秒级命中缓存返回，避免重复消耗大模型 Token 与底层数据库算力。
+ */
 @Service
 @RequiredArgsConstructor
 public class SemanticQueryCacheService {

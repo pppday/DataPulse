@@ -3,6 +3,12 @@ package com.pulseos.datapulse.dto;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+/**
+ * 自然语言查库取数与流式问答请求体（DTO）。
+ * <p>
+ * 支持两种查询入口：输入自然语言 {@code prompt} 让 Text-to-SQL 引擎自动生成并执行 SQL，
+ * 或直接传入用户手改后的 {@code customSql} 送入安全沙箱复跑验证。
+ */
 @Data
 public class AskAgentRequest {
     /**

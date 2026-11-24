@@ -146,6 +146,10 @@
 </template>
 
 <script setup>
+/**
+ * 【数仓运营与性能监控大盘（DashboardView）】
+ * 实时展示平台总分析请求次数、AST 沙箱通过率/拦截率、平均 SQL 执行耗时与数仓数据规模，并用 ECharts 绘制安全分布与近期查询趋势图。
+ */
 import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import apiClient from '../api/client'
 import * as echarts from 'echarts'

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.pulseos.datapulse.entity.Order;
 import org.apache.ibatis.annotations.Mapper;
 
+/** 默认数仓销售订单事实表（fact_order）Mapper。 */
 @Mapper
 public interface OrderMapper extends BaseMapper<Order> {
 }

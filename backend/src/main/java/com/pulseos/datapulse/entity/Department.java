@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/** 销售部门维度表实体（映射默认数仓 `dim_department`，记录部门名称、负责人及所属大区）。 */
 @Data
 @Builder
 @NoArgsConstructor

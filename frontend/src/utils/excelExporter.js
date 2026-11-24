@@ -1,3 +1,9 @@
+/**
+ * DataPulse 查询结果 Excel 报表导出工具模块。
+ * 提供两套导出能力，供智能分析工作台（AgentQueryView）一键导出分析明细与商业洞察：
+ * 1. exportFromBackend（主方案）：调用 Spring Boot 后端接口生成带样式排版的多 Sheet 专业 .xlsx 二进制流并下载；
+ * 2. exportToExcel（兜底方案）：基于 SheetJS (xlsx) 在浏览器本地直接组装工作簿，离线或弱网时也能快速导出。
+ */
 import * as XLSX from 'xlsx'
 import apiClient from '../api/client'
 
@@ -11,12 +17,12 @@ export async function exportFromBackend(payload) {
     throw new Error('导出请求参数不能为空')
   }
 
-  // 发起二进制 Blob 请求至 Java 后端
+  // 发起二进制 Blob 请求至 Java 后端（client.js 响应拦截器会识别 blob 并原样返回完整 response）
   const response = await apiClient.post('/agent/export/excel', payload, {
     responseType: 'blob'
   })
 
-  // 1. 从 HTTP 响应头解析文件名 (RFC 5987 UTF-8 或标准 filename)
+  // 1. 从 HTTP 响应头解析文件名 (RFC 5987 UTF-8 或标准 filename)，优先适配中文文件名编码
   let downloadFileName = payload.fileName || 'DataPulse_分析报表.xlsx'
   const disposition = response.headers?.['content-disposition'] || response.headers?.['Content-Disposition']
   if (disposition) {
@@ -41,7 +47,7 @@ export async function exportFromBackend(payload) {
     downloadFileName += '.xlsx'
   }
 
-  // 2. 将后端字节流转为 Blob 并触发浏览器标准下载
+  // 2. 将后端字节流转为 Blob，通过动态创建临时 <a> 标签触发浏览器下载，下载完立刻释放对象 URL 防止内存泄漏
   const blobData = response.data instanceof Blob ? response.data : new Blob([response.data], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   })
@@ -69,6 +75,7 @@ export function exportToExcel(columns, rows, fileName = 'DataPulse_报表', shee
     throw new Error('当前没有可导出的数据行')
   }
 
+  // 1. 组装二维数组（AOA）：首行为列名表头，后续每行按列名顺序抽取单元格值并把 null/undefined 置空
   const sheetData = []
   sheetData.push([...columns])
 
@@ -83,6 +90,7 @@ export function exportToExcel(columns, rows, fileName = 'DataPulse_报表', shee
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData)
 
+  // 2. 遍历每一列估算最大视觉宽度（兼顾中文双宽字符），把列宽约束在 12~60 之间避免挤成一团或过宽
   const colWidths = columns.map((col) => {
     let maxLen = getVisualLength(col)
     for (let i = 0; i < rows.length; i++) {
@@ -98,12 +106,14 @@ export function exportToExcel(columns, rows, fileName = 'DataPulse_报表', shee
   })
   ws['!cols'] = colWidths
 
+  // 3. 创建工作簿并清洗 Sheet 名称（Excel 规定不能含 \/*?[] 且最长 31 字符）
   const wb = XLSX.utils.book_new()
   const safeSheetName = (sheetName || 'Sheet1')
     .replace(/[\\/*?[\]]/g, '')
     .slice(0, 31) || 'Sheet1'
   XLSX.utils.book_append_sheet(wb, ws, safeSheetName)
 
+  // 4. 清洗下载文件名，自动补齐 .xlsx 后缀并替换操作系统不允许的路径非法字符
   const dateStr = formatDate(new Date())
   let cleanName = (fileName || `DataPulse_导出报表_${dateStr}`).trim()
   if (!cleanName.toLowerCase().endsWith('.xlsx')) {
@@ -111,6 +121,7 @@ export function exportToExcel(columns, rows, fileName = 'DataPulse_报表', shee
   }
   cleanName = cleanName.replace(/[\\/:*?"<>|]/g, '_')
 
+  // 5. 优先调用 SheetJS 默认写文件方法；若受浏览器环境限制报错，则手动转 Blob + <a> 标签兜底下载
   try {
     XLSX.writeFile(wb, cleanName)
   } catch (err) {
@@ -129,6 +140,10 @@ export function exportToExcel(columns, rows, fileName = 'DataPulse_报表', shee
   return cleanName
 }
 
+/**
+ * 估算字符串的视觉显示宽度，用于 Excel 自动列宽计算：
+ * 中文汉字占 2 个字符宽，其他非 ASCII 符号按 1.5 算，普通英文数字按 1 算。
+ */
 function getVisualLength(str) {
   if (!str) return 0
   let len = 0
@@ -145,6 +160,9 @@ function getVisualLength(str) {
   return Math.ceil(len)
 }
 
+/**
+ * 将 Date 对象格式化为 YYYYMMDD_HHmmss，用于拼装带时间戳的默认导出文件名。
+ */
 function formatDate(d) {
   const pad = (n) => String(n).padStart(2, '0')
   const YYYY = d.getFullYear()

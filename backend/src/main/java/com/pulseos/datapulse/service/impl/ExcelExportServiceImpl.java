@@ -37,7 +37,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 基于 Alibaba EasyExcel 3.3.4 的企业级防 OOM 流式 Excel 报表导出实现
+ * 【基于 Alibaba EasyExcel 3.3.4 的企业级防 OOM 流式 Excel 报表导出实现】
+ * 支持把自然语言查询或手写只读 SQL 的动态列结果直接写成带样式的多 Sheet `.xlsx` 文件流回浏览器下载（附带 SQL 审计与执行摘要页）。
  */
 @Slf4j
 @Service

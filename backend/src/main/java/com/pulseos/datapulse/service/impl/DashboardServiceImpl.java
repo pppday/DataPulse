@@ -23,6 +23,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
+/**
+ * 【运营监控大盘指标聚合服务】
+ * 统计平台累计查询次数、SQL 安全沙箱通过率与拦截数、平均查询耗时、核心数仓总行数以及最近 8 条查询审计明细。
+ */
 @Service
 @RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardService {

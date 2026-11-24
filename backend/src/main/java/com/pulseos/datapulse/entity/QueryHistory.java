@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/** SQL 安全审计与查询历史实体（映射 `sys_query_history`，记录每次自然语言提问、生成 SQL、沙箱是否放行/阻断原因与耗时）。 */
 @Data
 @Builder
 @NoArgsConstructor

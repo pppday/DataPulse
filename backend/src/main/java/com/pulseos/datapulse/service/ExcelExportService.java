@@ -3,6 +3,7 @@ package com.pulseos.datapulse.service;
 import com.pulseos.datapulse.dto.ExportExcelRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+/** 查询结果流式导出 Excel (.xlsx) 报表服务接口。 */
 public interface ExcelExportService {
     /**
      * 将查询分析数据流式导出为企业级高颜值 Excel (.xlsx) 表格并写入 HTTP 响应

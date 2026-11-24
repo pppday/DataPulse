@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/** 商品维度表实体（映射默认数仓 `dim_product`，记录商品编码、品类、单价、成本价与库存）。 */
 @Data
 @Builder
 @NoArgsConstructor

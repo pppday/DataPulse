@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/** Text-to-SQL Few-Shot 优质参考示例实体（映射 `sys_sql_example`，保存典型问法、标准 SQL 及其文本向量）。 */
 @Data
 @Builder
 @NoArgsConstructor

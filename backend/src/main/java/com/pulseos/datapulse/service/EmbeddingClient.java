@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 文本向量化客户端（封装 Spring AI EmbeddingModel，默认调用 BAAI/bge-m3）。
+ * 支持按 16 条分批向量化并做 L2 归一化，供 Few-Shot SQL 示例相似度检索使用；未配 Key 时优雅降级。
+ */
 @Service
 @RequiredArgsConstructor
 public class EmbeddingClient {

@@ -17,6 +17,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+/**
+ * 【用户登录认证与 RBAC 演示账号初始化服务】
+ * 启动时幂等确保 `admin`（总架构师）与 `analyst`（数据分析师）两个演示账号存在且采用 BCrypt 加密密码；
+ * 登录校验通过后调用 JwtTokenProvider 签发 24 小时有效的 Bearer JWT。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor

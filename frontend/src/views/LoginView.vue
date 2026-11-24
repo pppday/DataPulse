@@ -191,6 +191,10 @@
 </template>
 
 <script setup>
+/**
+ * 【DataPulse 企业登录页（LoginView）】
+ * 校验账号密码后通过 authStore 保存 JWT Token 与 RBAC 角色，并跳转至工作台主视图。
+ */
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'

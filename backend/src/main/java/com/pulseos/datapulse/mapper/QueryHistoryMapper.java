@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
+/** SQL 审计与查询历史表（sys_query_history）Mapper，内置联表拉取操作人账号与真实姓名的最近记录查询。 */
 @Mapper
 public interface QueryHistoryMapper extends BaseMapper<QueryHistory> {
 

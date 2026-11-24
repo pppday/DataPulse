@@ -29,6 +29,16 @@ import reactor.core.publisher.Flux;
 import java.time.LocalDateTime;
 import java.util.*;
 
+/**
+ * 【DataPulse 核心 Text-to-SQL 智能取数编排服务】
+ *
+ * 通俗理解：这是用户提问“谁是最大的客户 / 统计各大区销售额”后的总控流水线（历史类名沿用 DataAgentServiceImpl，本质是严谨的 Text-to-SQL 取数管线）：
+ * 1. 先查 Redis 语义缓存：相同或同义问题毫秒级直出，省大模型 Token 和数据库算力；
+ * 2. 拼装当前数据源白名单 Schema 字典 + 相似 Few-Shot SQL 示例，交给 DeepSeek 推导标准 SQL（自动区分 MySQL / PostgreSQL 方言）；
+ * 3. 送进 JSqlParser AST 安全沙箱：拦截一切写操作/敏感系统表，并自动注入 LIMIT 兜底；
+ * 4. 若执行报字段/语法错，允许把报错回喂给模型自动自愈修正一次；
+ * 5. 把最终查询结果与自动推荐图表类型封装返回，同时异步落库审计日志并回写语义缓存。
+ */
 @Service
 public class DataAgentServiceImpl implements DataAgentService {
 

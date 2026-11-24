@@ -16,6 +16,10 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Text-to-SQL Few-Shot 优质参考示例管理与检索服务。
+ * 在生成 SQL 前先按问题向量余弦相似度（无 Embedding Key 时自动降级为二元字符 Jaccard 相似度）挑出最相近的 Top-K 历史正确 SQL 喂给大模型，显著提升复杂多表统计准确率。
+ */
 @Service
 @RequiredArgsConstructor
 public class SqlExampleRetrievalService {

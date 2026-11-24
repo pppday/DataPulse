@@ -24,6 +24,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 基于 Redis 的多轮分析对话记忆仓库（实现 Spring AI ChatMemoryRepository，TTL 24 小时）。
+ * 当 Redis 偶发不可用时自动降级为进程内 ConcurrentHashMap，保证多轮追问不报错中断。
+ */
 @Repository
 @RequiredArgsConstructor
 public class RedisChatMemoryRepository implements ChatMemoryRepository {

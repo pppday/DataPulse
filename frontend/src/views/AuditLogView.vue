@@ -188,6 +188,10 @@
 </template>
 
 <script setup>
+/**
+ * 【SQL 执行与安全审计台账页（AuditLogView）】
+ * 展示平台所有历史查询与安全拦截流水，支持按“全部 / 审查通过 / 沙箱拦截”筛选，并弹窗查看完整 SQL、拦截原因与执行耗时。
+ */
 import { ref, computed, onMounted } from 'vue'
 import apiClient from '../api/client'
 import { useToastStore } from '../stores/toast'

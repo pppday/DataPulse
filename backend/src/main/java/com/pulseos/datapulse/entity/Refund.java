@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/** 退款退货事实表实体（映射默认数仓 `fact_refund`，记录退款金额、原因、状态与退款日期）。 */
 @Data
 @Builder
 @NoArgsConstructor

@@ -22,6 +22,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 【动态多数据源连接池管理服务】
+ *
+ * 通俗理解：这是平台的“多库切换开关与连接池管家”。
+ * - 支持在页面上动态挂载任意多个 MySQL 8.0/5.7 与 PostgreSQL 16 数据源，按需懒加载独立的 HikariCP 只读连接池（低内存配置）；
+ * - 自动兼容 IPv4、域名和 IPv6 地址（遇到裸 IPv6 地址时自动补 `[...]` 防止 JDBC URL 端口解析冲突）；
+ * - 新增或修改连接参数前先执行真实连通性探活，修改/删除时自动优雅关闭旧连接池防止内存泄漏。
+ */
 @Service
 @RequiredArgsConstructor
 public class DynamicDataSourceServiceImpl implements DynamicDataSourceService {

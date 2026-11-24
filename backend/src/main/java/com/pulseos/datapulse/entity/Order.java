@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/** 销售订单事实表实体（映射默认数仓 `fact_order`，记录下单量、销售额、毛利、支付方式与下单日期）。 */
 @Data
 @Builder
 @NoArgsConstructor

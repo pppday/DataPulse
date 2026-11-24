@@ -18,6 +18,15 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.function.Consumer;
 
+/**
+ * 【基于 JSqlParser AST 的只读 SQL 安全沙箱】
+ *
+ * 通俗理解：这是横在大模型和生产数据库之间的一道“硬核防线”（不用脆弱的正则，直接解析 SQL 抽象语法树 AST）：
+ * 1. 清洗 Markdown 代码块与按方言修正中文列别名（MySQL 反引号 / PostgreSQL 双引号）；
+ * 2. 强校验顶层语句类型必须是 `SELECT`，彻底阻断 INSERT/UPDATE/DELETE/DROP/ALTER 等一切写库与删库指令；
+ * 3. 提取 SQL 中引用的所有表名，拦截敏感系统表，并强制要求全部落在当前数据源已授权白名单内；
+ * 4. 对未写 LIMIT 的查询自动补上行数上限，防止全表扫描把内存或前端图表撑爆。
+ */
 @Service
 public class SqlSafetySandboxServiceImpl implements SqlSafetySandboxService {
 

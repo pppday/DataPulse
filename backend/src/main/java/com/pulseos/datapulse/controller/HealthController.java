@@ -9,10 +9,16 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 服务健康检查探针控制器（公开白名单接口，无需 JWT）。
+ * <p>
+ * 供 Docker 容器健康检查、Nginx 反向代理探活以及前端状态指示灯检测后端服务是否正常运行。
+ */
 @RestController
 @RequestMapping("/api/v1/health")
 public class HealthController {
 
+    /** 返回服务在线状态、名称、版本号与当前服务器时间戳 */
     @GetMapping
     public Result<Map<String, Object>> health() {
         Map<String, Object> data = new HashMap<>();
