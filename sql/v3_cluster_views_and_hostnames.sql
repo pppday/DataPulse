@@ -72,15 +72,11 @@ SELECT
     created_at
 FROM ticket_user.user_account;
 
--- 4. 将 DataPulse 数据源升级为真实可解析的 VPC 内网集群域名（配合 /etc/hosts 内部服务发现）
-UPDATE datapulse_db.sys_datasource SET host = 'dw-master.datapulse.internal' WHERE id = 1 AND database_name = 'datapulse_db';
-UPDATE datapulse_db.sys_datasource SET host = 'mysql-show.pulseticket.internal' WHERE id = 2 AND database_name = 'ticket_show';
-UPDATE datapulse_db.sys_datasource SET host = 'mysql-order.pulseticket.internal' WHERE id = 3 AND database_name = 'ticket_order';
-UPDATE datapulse_db.sys_datasource SET host = 'mysql-risk.pulseflow.internal' WHERE id = 4 AND database_name = 'pulseflow_db';
+-- 4. 保持 DataPulse 数据源统一使用本机回环 IP (127.0.0.1:3306)，如尚未挂载 PulseTicket 用户会员库则自动接入
+UPDATE datapulse_db.sys_datasource SET host = '127.0.0.1' WHERE id IN (1, 2, 3, 4, 5);
 
--- 如尚未挂载 PulseTicket 用户会员库，则自动接入（复用同实例密码）
 INSERT INTO datapulse_db.sys_datasource (name, db_type, host, port, database_name, username, password, is_default, status, created_at, updated_at)
-SELECT 'PulseTicket 用户会员异构库', 'MYSQL', 'mysql-user.pulseticket.internal', 3306, 'ticket_user',
+SELECT 'PulseTicket 用户会员异构库', 'MYSQL', '127.0.0.1', 3306, 'ticket_user',
        username, password, 0, 1, NOW(), NOW()
 FROM datapulse_db.sys_datasource
 WHERE id = 3
