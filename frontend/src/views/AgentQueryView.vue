@@ -73,7 +73,7 @@
             :class="{ 'dp-segment-item-active': inputMode === 'nl' }"
           >
             <MessageSquare class="w-3.5 h-3.5" :class="inputMode === 'nl' ? 'text-accent-600' : 'text-slate-400'" />
-            <span>自然语言智能问答 (AI Agent)</span>
+            <span>自然语言查询 (Text-to-SQL)</span>
           </button>
           <button
             type="button"

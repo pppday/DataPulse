@@ -5,7 +5,7 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
         <!-- Left: Brand & Hairline Underline Navigation -->
         <div class="flex items-center h-full flex-shrink-0">
-          <router-link to="/agent" class="flex items-center space-x-2.5 group flex-shrink-0">
+          <router-link to="/query" class="flex items-center space-x-2.5 group flex-shrink-0">
             <div class="w-8 h-8 rounded-lg bg-ink-900 text-[#FAF9F6] flex items-center justify-center group-hover:bg-ink-800 transition-colors">
               <Activity class="w-4 h-4" :stroke-width="1.75" />
             </div>
@@ -244,7 +244,7 @@ const isMenuOpen = ref(false)
 const dropdownRef = ref(null)
 
 const navItems = [
-  { to: '/agent', label: '智能分析工作台', short: '智能工作台', icon: Terminal },
+  { to: '/query', label: '智能分析工作台', short: '智能工作台', icon: Terminal },
   { to: '/schema', label: '数仓元数据字典', short: '数据字典', icon: Table2 },
   { to: '/datasource', label: '数据源管理', short: '数仓管理', icon: Server },
   { to: '/audit', label: 'SQL安全审计', short: '安全审计', icon: ShieldCheck },

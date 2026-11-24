@@ -215,7 +215,7 @@ const handleLogin = async () => {
   try {
     const data = await authStore.login(form.username, form.password)
     toast.success(`欢迎回来，${data.realName || data.username}`)
-    router.push('/agent')
+    router.push('/query')
   } catch (err) {
     errorMessage.value = err.message || '登录失败，请核实用户名与密码'
   } finally {

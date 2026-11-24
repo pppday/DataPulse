@@ -109,13 +109,15 @@
               <div class="flex items-center space-x-2">
                 <span
                   class="rounded-md px-1.5 py-0.5 text-[9px] font-bold tracking-wider border"
-                  :class="table.tableName.startsWith('fact_')
-                    ? 'bg-accent-50 text-accent-700 border-accent-200'
-                    : (table.tableName.startsWith('sys_')
-                      ? 'bg-slate-100 text-slate-600 border-slate-200'
-                      : 'bg-pine-50 text-pine-700 border-pine-200')"
+                  :class="table.tableName.startsWith('v_')
+                    ? 'bg-sky-50 text-sky-700 border-sky-200'
+                    : (table.tableName.startsWith('fact_')
+                      ? 'bg-accent-50 text-accent-700 border-accent-200'
+                      : (table.tableName.startsWith('sys_')
+                        ? 'bg-slate-100 text-slate-600 border-slate-200'
+                        : 'bg-pine-50 text-pine-700 border-pine-200'))"
                 >
-                  {{ table.tableName.startsWith('fact_') ? 'FACT' : (table.tableName.startsWith('sys_') ? 'SYS' : 'DIM') }}
+                  {{ table.tableName.startsWith('v_') ? 'VIEW' : (table.tableName.startsWith('fact_') ? 'FACT' : (table.tableName.startsWith('sys_') ? 'SYS' : 'DIM')) }}
                 </span>
                 <h3 class="text-xs font-bold text-ink-900 font-mono">{{ table.tableName }}</h3>
               </div>

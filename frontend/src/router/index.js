@@ -17,13 +17,17 @@ const routes = [
   {
     path: '/',
     component: MainLayout,
-    redirect: '/agent',
+    redirect: '/query',
     children: [
       {
-        path: 'agent',
+        path: 'query',
         name: 'AgentQuery',
         component: AgentQueryView,
         meta: { title: '智能分析工作台' }
+      },
+      {
+        path: 'agent',
+        redirect: '/query'
       },
       {
         path: 'schema',
@@ -53,7 +57,7 @@ const routes = [
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/agent'
+    redirect: '/query'
   }
 ]
 

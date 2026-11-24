@@ -1,4 +1,4 @@
-# DataPulse 企业级动态多数据源智能分析中台 (Enterprise Dynamic Multi-DataSource & Text-to-SQL Agent Platform)
+# DataPulse 企业级动态多数据源智能分析中台 (Enterprise Dynamic Multi-DataSource & Text-to-SQL Analytics Platform)
 
 [![Java 17](https://img.shields.io/badge/Java-17-orange.svg)](https://openjdk.org/projects/jdk/17/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.7-brightgreen.svg)](https://spring.io/projects/spring-boot)
