@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isJwtExpired } from '../stores/auth'
 import MainLayout from '../layouts/MainLayout.vue'
 import LoginView from '../views/LoginView.vue'
 import AgentQueryView from '../views/AgentQueryView.vue'
@@ -62,7 +63,12 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('datapulse_token')
+  let token = localStorage.getItem('datapulse_token')
+  if (token && isJwtExpired(token)) {
+    localStorage.removeItem('datapulse_token')
+    localStorage.removeItem('datapulse_user')
+    token = null
+  }
   if (!to.meta.public && !token) {
     next({ name: 'Login' })
   } else if (to.name === 'Login' && token) {

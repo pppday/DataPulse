@@ -2,7 +2,28 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import apiClient from '../api/client'
 
+export function isJwtExpired(token) {
+  if (!token || typeof token !== 'string') return true
+  const parts = token.split('.')
+  if (parts.length !== 3) return true
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
+    const payload = JSON.parse(atob(padded))
+    if (!payload.exp) return false
+    return payload.exp * 1000 <= Date.now()
+  } catch {
+    return true
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
+  const storedToken = localStorage.getItem('datapulse_token') || ''
+  if (storedToken && isJwtExpired(storedToken)) {
+    localStorage.removeItem('datapulse_token')
+    localStorage.removeItem('datapulse_user')
+  }
+
   const token = ref(localStorage.getItem('datapulse_token') || '')
   const user = ref(JSON.parse(localStorage.getItem('datapulse_user') || 'null'))
   const switchingRole = ref(false)

@@ -137,7 +137,9 @@ public class DynamicDataSourceServiceImpl implements DynamicDataSourceService {
             return defaultSpringDataSource;
         }
 
-        if (ds.getId() == 1L && "127.0.0.1".equals(ds.getHost()) && "datapulse_db".equals(ds.getDatabaseName())) {
+        if (ds.getId() == 1L
+                && ("127.0.0.1".equals(ds.getHost()) || "dw-master.datapulse.internal".equals(ds.getHost()))
+                && "datapulse_db".equals(ds.getDatabaseName())) {
             return defaultSpringDataSource;
         }
 

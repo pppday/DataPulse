@@ -132,7 +132,7 @@ public class DataAgentServiceImpl implements DataAgentService {
             }
 
             // 3. 调用大模型生成针对性只读 SQL
-            generatedSql = generateSqlWithLlm(userPrompt, schemaContext, fewShotBlock);
+            generatedSql = generateSqlWithLlm(ds.getId(), userPrompt, schemaContext, fewShotBlock);
         }
 
         Set<String> allowedTables = schemaCatalogService.getWhitelistedTables(ds.getId());
@@ -296,10 +296,13 @@ public class DataAgentServiceImpl implements DataAgentService {
     /**
      * 调用 Spring AI ChatClient 进行 Text-to-SQL 推导
      */
-    private String generateSqlWithLlm(String userPrompt, String schemaContext, String fewShotBlock) {
+    private String generateSqlWithLlm(Long datasourceId, String userPrompt, String schemaContext, String fewShotBlock) {
         if (!isLlmConfigured()) {
-            log.info("[DEEPSEEK_API_KEY 未配置，直接使用本地启发式规则兜底]");
-            return fallbackSqlHeuristic(userPrompt);
+            if (Long.valueOf(1L).equals(datasourceId)) {
+                log.info("[LLM API KEY 未配置，默认数仓使用本地启发式规则兜底]");
+                return fallbackSqlHeuristic(userPrompt);
+            }
+            throw new BusinessException(503, "大模型 API Key 未配置，无法为当前异构数据源自动生成 SQL");
         }
         String systemInstruction = """
             你是企业级智能 Text-to-SQL 数据分析 Agent。
@@ -314,7 +317,8 @@ public class DataAgentServiceImpl implements DataAgentService {
                - 当用户明确要求“所有 / 全部 / 列表 / 清单”（例如“查所有商品”、“列出所有订单”）或进行 GROUP BY 汇总分组时，切勿擅自添加 LIMIT 限制！
                - 仅当用户既未指定数量又未要求全部、属于宽泛排行类问题时，才可使用合理的默认上限（例如 LIMIT 50）。
             5. 条件过滤谨慎原则：除非用户问题中有极其明确的状态限制（例如用户明确指出“已支付”、“已完成”），否则切勿擅自主观添加未要求的多余过滤条件（例如不要擅自添加 status IN (...) 等严苛状态码过滤），避免因测试数据或状态流转导致 0 行无数据返回！
-            6. 输出必须只包含一条合法的标准 MySQL 8.0 SQL 语句，禁止输出任何寒暄或 Markdown 以外的多余解释。
+            6. 当用户询问客户/用户排行（如“谁是最大的客户”、“消费最多的用户”）且元数据字典中存在跨库宽表视图（如 `v_ticket_sales_customer`、`v_order_customer_detail`、`v_member_profile` 或 `dim_customer`）时，优先查询宽表并直接展示客户真实名称/用户名（`customer_name` / `username`），切勿只输出冰冷的数字 ID！
+            7. 输出必须只包含一条合法的标准 MySQL 8.0 SQL 语句，禁止输出任何寒暄或 Markdown 以外的多余解释。
             """;
 
         StringBuilder userContentBuilder = new StringBuilder(schemaContext);
@@ -341,10 +345,17 @@ public class DataAgentServiceImpl implements DataAgentService {
                 }
             }
         } catch (Exception e) {
-            log.warn("[Spring AI Text-to-SQL 调用失败，启用智能规则兜底引擎] error={}", e.getMessage());
+            log.warn("[Spring AI Text-to-SQL 调用失败] datasourceId={}, error={}", datasourceId, e.getMessage());
+            if (!Long.valueOf(1L).equals(datasourceId)) {
+                throw new BusinessException(503, "大模型 SQL 生成服务调用失败，无法为当前异构数据源生成查询，请稍后重试");
+            }
         }
 
-        // 离线/降级高保真规则匹配兜底
+        if (!Long.valueOf(1L).equals(datasourceId)) {
+            throw new BusinessException(503, "大模型未返回有效 SQL，请调整提问后重试");
+        }
+
+        // 仅针对默认星型数仓 (datasourceId=1) 启用离线规则兜底
         return fallbackSqlHeuristic(userPrompt);
     }
 
@@ -384,7 +395,47 @@ public class DataAgentServiceImpl implements DataAgentService {
             return Map.of();
         }
 
+        // 智能选择 X 轴维度列：优先选第一个可读的名称/文本维度列（避免拿裸 user_id 当 X 轴，同时过滤非数值的文本列进入柱状图 series）
         String xCol = columns.get(0);
+        for (String col : columns) {
+            Object sample = rows.get(0).get(col);
+            boolean isText = sample != null && !(sample instanceof Number);
+            String lower = col.toLowerCase();
+            if (isText && (lower.contains("名") || lower.contains("客户") || lower.contains("大区")
+                    || lower.contains("品类") || lower.contains("产品") || lower.contains("商品")
+                    || lower.contains("演出") || lower.contains("部门") || lower.contains("日期")
+                    || lower.contains("月") || lower.contains("日") || lower.contains("name")
+                    || lower.contains("title") || lower.contains("category"))) {
+                xCol = col;
+                break;
+            }
+        }
+        if (rows.get(0).get(xCol) instanceof Number) {
+            for (String col : columns) {
+                Object sample = rows.get(0).get(col);
+                if (sample != null && !(sample instanceof Number)) {
+                    xCol = col;
+                    break;
+                }
+            }
+        }
+
+        List<String> metricCols = new ArrayList<>();
+        for (String col : columns) {
+            if (col.equals(xCol)) continue;
+            String lower = col.toLowerCase();
+            if (lower.equals("id") || lower.endsWith("_id") || lower.endsWith("id")) continue;
+            boolean hasNumeric = rows.stream().anyMatch(r -> r.get(col) instanceof Number);
+            if (hasNumeric) {
+                metricCols.add(col);
+            }
+        }
+        if (metricCols.isEmpty()) {
+            for (String col : columns) {
+                if (!col.equals(xCol)) metricCols.add(col);
+            }
+        }
+
         List<Object> xData = new ArrayList<>();
         for (Map<String, Object> row : rows) {
             xData.add(row.get(xCol));
@@ -393,7 +444,7 @@ public class DataAgentServiceImpl implements DataAgentService {
         Map<String, Object> options = new HashMap<>();
 
         if ("pie".equalsIgnoreCase(chartType)) {
-            String valCol = columns.get(1);
+            String valCol = metricCols.get(0);
             List<Map<String, Object>> pieData = new ArrayList<>();
             for (Map<String, Object> row : rows) {
                 pieData.add(Map.of(
@@ -418,15 +469,21 @@ public class DataAgentServiceImpl implements DataAgentService {
         // Bar or Line
         List<Map<String, Object>> seriesList = new ArrayList<>();
         List<String> legendData = new ArrayList<>();
+        List<Double> seriesMaxValues = new ArrayList<>();
 
-        for (int i = 1; i < columns.size(); i++) {
-            String colName = columns.get(i);
+        for (String colName : metricCols) {
             legendData.add(colName);
 
             List<Object> seriesData = new ArrayList<>();
+            double maxAbs = 0.0;
             for (Map<String, Object> row : rows) {
-                seriesData.add(row.get(colName) != null ? row.get(colName) : 0);
+                Object val = row.get(colName) != null ? row.get(colName) : 0;
+                seriesData.add(val);
+                if (val instanceof Number n) {
+                    maxAbs = Math.max(maxAbs, Math.abs(n.doubleValue()));
+                }
             }
+            seriesMaxValues.add(maxAbs);
 
             Map<String, Object> seriesItem = new HashMap<>();
             seriesItem.put("name", colName);
@@ -441,6 +498,13 @@ public class DataAgentServiceImpl implements DataAgentService {
             seriesList.add(seriesItem);
         }
 
+        // 当恰好有 2 个数值指标且量级相差 >= 10 倍（例如 购票数=6 vs 消费总额=5780）时自动启用双 Y 轴，避免小指标柱子被压扁看不见
+        boolean useDualYAxis = seriesList.size() == 2
+                && seriesMaxValues.get(0) > 0
+                && seriesMaxValues.get(1) > 0
+                && (Math.max(seriesMaxValues.get(0), seriesMaxValues.get(1))
+                    / Math.min(seriesMaxValues.get(0), seriesMaxValues.get(1))) >= 10.0;
+
         options.put("tooltip", Map.of("trigger", "axis"));
         options.put("legend", Map.of("data", legendData, "top", 10));
         options.put("grid", Map.of("left", "3%", "right", "4%", "bottom", "18%", "containLabel", true));
@@ -449,7 +513,16 @@ public class DataAgentServiceImpl implements DataAgentService {
                 "data", xData,
                 "axisLabel", Map.of("interval", 0, "rotate", 30)
         ));
-        options.put("yAxis", Map.of("type", "value"));
+        if (useDualYAxis) {
+            seriesList.get(0).put("yAxisIndex", 0);
+            seriesList.get(1).put("yAxisIndex", 1);
+            options.put("yAxis", List.of(
+                    Map.of("type", "value", "name", legendData.get(0)),
+                    Map.of("type", "value", "name", legendData.get(1))
+            ));
+        } else {
+            options.put("yAxis", Map.of("type", "value"));
+        }
         options.put("series", seriesList);
 
         return options;

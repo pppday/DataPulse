@@ -23,14 +23,24 @@ spring:
       port: 6379
       password: 12345678
       timeout: 3000ms
+  http:
+    client:
+      connect-timeout: 5s
+      read-timeout: 30s
   ai:
+    retry:
+      max-attempts: 2
+      backoff:
+        initial-interval: 1s
+        multiplier: 2
+        max-interval: 3s
     openai:
       api-key: ${LLM_API_KEY:${DEEPSEEK_API_KEY:sk-placeholder-unset}}
-      base-url: ${LLM_BASE_URL:${DEEPSEEK_BASE_URL:https://api.pppday.com/trial}}
+      base-url: ${LLM_BASE_URL:${DEEPSEEK_BASE_URL:https://api.deepseek.com}}
       chat:
         completions-path: /v1/chat/completions
         options:
-          model: ${LLM_MODEL:${DEEPSEEK_MODEL:gemini-3-flash}}
+          model: ${LLM_MODEL:${DEEPSEEK_MODEL:deepseek-chat}}
           temperature: 0.1
       embedding:
         api-key: ${EMBEDDING_API_KEY:sk-placeholder-unset}

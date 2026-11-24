@@ -75,13 +75,13 @@ public class SchemaCatalogServiceImpl implements SchemaCatalogService {
         Map<String, SysTableConfig> configMap = configs.stream()
                 .collect(Collectors.toMap(SysTableConfig::getTableName, c -> c, (a, b) -> a));
 
-        // 2. 从 information_schema 扫描该数据库下的所有实体表
+        // 2. 从 information_schema 扫描该数据库下的所有实体表与跨库分析视图
         String tablesSql = """
-            SELECT TABLE_NAME, TABLE_COMMENT, TABLE_ROWS
+            SELECT TABLE_NAME, TABLE_COMMENT, TABLE_ROWS, TABLE_TYPE
             FROM information_schema.TABLES
             WHERE TABLE_SCHEMA = ?
-              AND TABLE_TYPE = 'BASE TABLE'
-            ORDER BY TABLE_NAME ASC
+              AND TABLE_TYPE IN ('BASE TABLE', 'VIEW')
+            ORDER BY CASE WHEN TABLE_TYPE = 'VIEW' THEN 0 ELSE 1 END, TABLE_NAME ASC
         """;
 
         List<Map<String, Object>> tableRows = jdbcTemplate.queryForList(tablesSql, dbName);
@@ -90,6 +90,9 @@ public class SchemaCatalogServiceImpl implements SchemaCatalogService {
         for (Map<String, Object> trow : tableRows) {
             String tableName = (String) trow.get("TABLE_NAME");
             String rawComment = (String) trow.get("TABLE_COMMENT");
+            if ("VIEW".equalsIgnoreCase(rawComment)) {
+                rawComment = "";
+            }
             Number tableRowsCount = (Number) trow.get("TABLE_ROWS");
 
             // 判断是否是系统内置敏感表
